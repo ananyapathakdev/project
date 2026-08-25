@@ -7,10 +7,10 @@ export default function Hero() {
 
           <div className="mb-6 inline-block rounded-full border border-violet-500/20 bg-violet-500/10 px-4 py-2 text-sm text-violet-600 dark:text-violet-300">
             ✨ Your life, organized in one place
-          </div>
+          </div> 
 
           <h1 className="text-4xl font-bold leading-tight text-gray-900 sm:text-5xl md:text-7xl dark:text-white">
-            Take Control of Your{" "}
+            Take Control of Your {" "}
             <span className="bg-gradient-to-r from-violet-500 to-indigo-500 bg-clip-text text-transparent">
               Life
             </span>
