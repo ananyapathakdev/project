@@ -1,4 +1,71 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type User = {
+  id: number;
+  name: string;
+  email: string;
+};
+
 export default function DashboardPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const getUser = async () => {
+      try {
+       const response = await fetch("/api/auth/me", {
+  cache: "no-store",
+  credentials: "include",
+});
+
+        if (!response.ok) {
+          setUser(null);
+          return;
+        }
+
+        const data = await response.json();
+
+        setUser(data.user ?? data);
+      } catch (error) {
+        console.error("Failed to fetch user:", error);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getUser();
+  }, []);
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#090d16] text-white">
+        <p className="text-slate-400">Loading dashboard...</p>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#090d16] text-white">
+        <div className="text-center">
+          <h1 className="text-xl font-semibold">
+            Please login first
+          </h1>
+
+          <a
+            href="/login"
+            className="mt-4 inline-block rounded-xl bg-purple-600 px-5 py-2 text-sm font-medium hover:bg-purple-500"
+          >
+            Go to Login
+          </a>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#090d16] text-white">
       <div className="flex min-h-screen">
@@ -58,12 +125,12 @@ export default function DashboardPage() {
               <div className="flex items-center gap-3">
 
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-500/20 text-sm font-semibold text-purple-300">
-                  A
+                  {user.name.charAt(0).toUpperCase()}
                 </div>
 
                 <div>
                   <p className="text-sm font-medium text-white">
-                    Ananya
+                    {user.name}
                   </p>
 
                   <p className="text-xs text-slate-500">
@@ -89,7 +156,7 @@ export default function DashboardPage() {
               </p>
 
               <h1 className="mt-1 text-xl font-semibold">
-                Good morning, Ananya 👋
+                Good morning, {user.name} 👋
               </h1>
             </div>
 
@@ -100,7 +167,7 @@ export default function DashboardPage() {
               </button>
 
               <div className="flex h-10 w-10 items-center justify-center rounded-full border border-purple-400/20 bg-purple-500/10 text-sm font-semibold text-purple-300">
-                A
+                {user.name.charAt(0).toUpperCase()}
               </div>
 
             </div>
@@ -377,6 +444,7 @@ export default function DashboardPage() {
                     ["DSA Preparation", 45],
                   ].map(([goal, progress]) => (
                     <div key={goal as string}>
+
                       <div className="mb-2 flex justify-between">
                         <span className="text-sm text-slate-300">
                           {goal}
@@ -393,6 +461,7 @@ export default function DashboardPage() {
                           className="h-full rounded-full bg-gradient-to-r from-purple-600 to-violet-400"
                         />
                       </div>
+
                     </div>
                   ))}
 
