@@ -16,6 +16,7 @@ model User {
 
   sessions Session[]
   tasks    Task[]
+  habits Habit[]
 }
 
 model Session {
@@ -29,6 +30,15 @@ model Session {
 model Task {
   id        Int      @id @default(autoincrement())
   title     String
+  completed Boolean  @default(false)
+  userId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+model Habit {
+  id        Int      @id @default(autoincrement())
+  name      String
   completed Boolean  @default(false)
   userId    Int
   createdAt DateTime @default(now())

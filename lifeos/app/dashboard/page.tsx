@@ -8,17 +8,46 @@ type User = {
   email: string;
 };
 
+type Task = {
+  id: number;
+  title: string;
+  completed: boolean;
+  userId: number;
+  createdAt: string;
+};
+
+type Habit = {
+  id: number;
+  name: string;
+  completed: boolean;
+  userId: number;
+  createdAt: string;
+};
+
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
 
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [habitsLoading, setHabitsLoading] = useState(true);
+
+  const [addingTask, setAddingTask] = useState(false);
+  const [addingHabit, setAddingHabit] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  // =========================
+  // GET LOGGED-IN USER
+  // =========================
   useEffect(() => {
     const getUser = async () => {
       try {
-       const response = await fetch("/api/auth/me", {
-  cache: "no-store",
-  credentials: "include",
-});
+        const response = await fetch("/api/auth/me", {
+          cache: "no-store",
+          credentials: "include",
+        });
 
         if (!response.ok) {
           setUser(null);
@@ -26,7 +55,6 @@ export default function DashboardPage() {
         }
 
         const data = await response.json();
-
         setUser(data.user ?? data);
       } catch (error) {
         console.error("Failed to fetch user:", error);
@@ -39,14 +67,259 @@ export default function DashboardPage() {
     getUser();
   }, []);
 
+  // =========================
+  // GET TASKS
+  // =========================
+  useEffect(() => {
+    const getTasks = async () => {
+      try {
+        const response = await fetch("/api/tasks", {
+          cache: "no-store",
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          console.error("Failed to fetch tasks");
+          return;
+        }
+
+        const data = await response.json();
+        setTasks(data);
+      } catch (error) {
+        console.error("Failed to fetch tasks:", error);
+      } finally {
+        setTasksLoading(false);
+      }
+    };
+
+    getTasks();
+  }, []);
+
+  // =========================
+  // GET HABITS
+  // =========================
+  useEffect(() => {
+    const getHabits = async () => {
+      try {
+        const response = await fetch("/api/habits", {
+          cache: "no-store",
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          console.error("Failed to fetch habits");
+          return;
+        }
+
+        const data = await response.json();
+        setHabits(data);
+      } catch (error) {
+        console.error("Failed to fetch habits:", error);
+      } finally {
+        setHabitsLoading(false);
+      }
+    };
+
+    getHabits();
+  }, []);
+
+  // =========================
+  // ADD TASK
+  // =========================
+  const handleAddTask = async () => {
+    const title = window.prompt("Enter your task:");
+
+    if (!title || title.trim() === "") {
+      return;
+    }
+
+    try {
+      setAddingTask(true);
+
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          title: title.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Failed to add task");
+        return;
+      }
+
+      setTasks((prevTasks) => [data, ...prevTasks]);
+    } catch (error) {
+      console.error("Failed to add task:", error);
+      alert("Something went wrong");
+    } finally {
+      setAddingTask(false);
+    }
+  };
+
+  // =========================
+  // ADD HABIT
+  // =========================
+  const handleAddHabit = async () => {
+    const name = window.prompt("Enter your habit:");
+
+    if (!name || name.trim() === "") {
+      return;
+    }
+
+    try {
+      setAddingHabit(true);
+
+      const response = await fetch("/api/habits", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          name: name.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Failed to add habit");
+        return;
+      }
+
+      setHabits((prevHabits) => [data, ...prevHabits]);
+    } catch (error) {
+      console.error("Failed to add habit:", error);
+      alert("Something went wrong");
+    } finally {
+      setAddingHabit(false);
+    }
+  };
+
+  // =========================
+  // TOGGLE TASK
+  // =========================
+  const handleToggleTask = async (task: Task) => {
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          id: task.id,
+          completed: !task.completed,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Failed to update task");
+        return;
+      }
+
+      setTasks((prevTasks) =>
+        prevTasks.map((item) =>
+          item.id === data.id ? data : item
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update task:", error);
+      alert("Something went wrong");
+    }
+  };
+
+  // =========================
+  // DELETE TASK
+  // =========================
+  const handleDeleteTask = async (taskId: number) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this task?"
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          id: taskId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Failed to delete task");
+        return;
+      }
+
+      setTasks((prevTasks) =>
+        prevTasks.filter((task) => task.id !== taskId)
+      );
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+      alert("Something went wrong");
+    }
+  };
+
+  // =========================
+  // LOGOUT
+  // =========================
+  const handleLogout = async () => {
+    try {
+      setLoggingOut(true);
+
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        alert("Logout failed");
+        setLoggingOut(false);
+        return;
+      }
+
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout error:", error);
+      alert("Something went wrong");
+      setLoggingOut(false);
+    }
+  };
+
+  // =========================
+  // LOADING
+  // =========================
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#090d16] text-white">
-        <p className="text-slate-400">Loading dashboard...</p>
+        <p className="text-slate-400">
+          Loading dashboard...
+        </p>
       </main>
     );
   }
 
+  // =========================
+  // NOT LOGGED IN
+  // =========================
   if (!user) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#090d16] text-white">
@@ -70,7 +343,7 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-[#090d16] text-white">
       <div className="flex min-h-screen">
 
-        {/* Sidebar */}
+        {/* ================= SIDEBAR ================= */}
         <aside className="hidden w-64 border-r border-white/10 bg-[#0d121d] p-5 lg:block">
 
           {/* Logo */}
@@ -114,13 +387,23 @@ export default function DashboardPage() {
 
           </nav>
 
-          {/* Bottom */}
+          {/* Bottom Section */}
           <div className="absolute bottom-6 w-[216px]">
 
             <button className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white">
               ⚙️ Settings
             </button>
 
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-red-400 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+            >
+              🚪
+              {loggingOut ? "Logging out..." : "Logout"}
+            </button>
+
+            {/* User */}
             <div className="mt-4 border-t border-white/10 pt-4">
               <div className="flex items-center gap-3">
 
@@ -144,7 +427,7 @@ export default function DashboardPage() {
           </div>
         </aside>
 
-        {/* Main Content */}
+        {/* ================= MAIN ================= */}
         <section className="flex-1">
 
           {/* Topbar */}
@@ -162,8 +445,12 @@ export default function DashboardPage() {
 
             <div className="flex items-center gap-3">
 
-              <button className="hidden rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-300 transition hover:bg-white/[0.06] sm:block">
-                + Add Task
+              <button
+                onClick={handleAddTask}
+                disabled={addingTask}
+                className="hidden rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-slate-300 transition hover:bg-white/[0.06] disabled:opacity-50 sm:block"
+              >
+                {addingTask ? "Adding..." : "+ Add Task"}
               </button>
 
               <div className="flex h-10 w-10 items-center justify-center rounded-full border border-purple-400/20 bg-purple-500/10 text-sm font-semibold text-purple-300">
@@ -173,12 +460,13 @@ export default function DashboardPage() {
             </div>
           </header>
 
-          {/* Dashboard */}
+          {/* Dashboard Content */}
           <div className="p-5 sm:p-8">
 
-            {/* Stats */}
+            {/* ================= STATS ================= */}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
+              {/* Tasks */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                 <p className="text-sm text-slate-500">
                   Total Tasks
@@ -186,15 +474,16 @@ export default function DashboardPage() {
 
                 <div className="mt-3 flex items-end justify-between">
                   <h2 className="text-3xl font-bold">
-                    12
+                    {tasks.length}
                   </h2>
 
                   <span className="text-xs text-emerald-400">
-                    +20%
+                    Live
                   </span>
                 </div>
               </div>
 
+              {/* Habits */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                 <p className="text-sm text-slate-500">
                   Habits
@@ -202,15 +491,16 @@ export default function DashboardPage() {
 
                 <div className="mt-3 flex items-end justify-between">
                   <h2 className="text-3xl font-bold">
-                    8
+                    {habits.length}
                   </h2>
 
                   <span className="text-xs text-purple-400">
-                    7 day streak
+                    Active
                   </span>
                 </div>
               </div>
 
+              {/* Goals */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                 <p className="text-sm text-slate-500">
                   Active Goals
@@ -227,6 +517,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
+              {/* Productivity */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
                 <p className="text-sm text-slate-500">
                   Productivity
@@ -245,13 +536,14 @@ export default function DashboardPage() {
 
             </div>
 
-            {/* Content Grid */}
+            {/* ================= TASKS + STREAK ================= */}
             <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
 
-              {/* Today's Tasks */}
+              {/* Tasks */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
 
                 <div className="flex items-center justify-between">
+
                   <div>
                     <h2 className="font-semibold">
                       Today's Tasks
@@ -262,73 +554,111 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  <button className="text-sm text-purple-400 hover:text-purple-300">
-                    View all
+                  <button
+                    onClick={handleAddTask}
+                    disabled={addingTask}
+                    className="text-sm text-purple-400 hover:text-purple-300 disabled:opacity-50"
+                  >
+                    {addingTask ? "Adding..." : "+ Add"}
                   </button>
+
                 </div>
 
                 <div className="mt-6 space-y-3">
 
-                  <div className="flex items-center gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/10 text-xs text-emerald-400">
-                      ✓
+                  {tasksLoading ? (
+                    <p className="text-sm text-slate-500">
+                      Loading tasks...
+                    </p>
+                  ) : tasks.length === 0 ? (
+
+                    <div className="rounded-xl border border-dashed border-white/10 p-6 text-center">
+
+                      <p className="text-sm text-slate-500">
+                        No tasks yet.
+                      </p>
+
+                      <button
+                        onClick={handleAddTask}
+                        className="mt-3 text-sm text-purple-400 hover:text-purple-300"
+                      >
+                        Add your first task
+                      </button>
+
                     </div>
 
-                    <div className="flex-1">
-                      <p className="text-sm text-slate-300">
-                        Complete LifeOS project
-                      </p>
+                  ) : (
 
-                      <p className="mt-1 text-xs text-slate-600">
-                        Completed
-                      </p>
-                    </div>
+                    tasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className="flex items-center gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4"
+                      >
 
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] text-emerald-400">
-                      Done
-                    </span>
-                  </div>
+                        <button
+                          onClick={() => handleToggleTask(task)}
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${
+                            task.completed
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "border border-purple-400/30 hover:border-purple-400"
+                          }`}
+                        >
+                          {task.completed ? "✓" : ""}
+                        </button>
 
-                  <div className="flex items-center gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                    <div className="h-6 w-6 rounded-full border border-purple-400/30" />
+                        <div className="flex-1">
 
-                    <div className="flex-1">
-                      <p className="text-sm text-slate-300">
-                        Practice React.js
-                      </p>
+                          <p
+                            className={`text-sm ${
+                              task.completed
+                                ? "text-slate-500 line-through"
+                                : "text-slate-300"
+                            }`}
+                          >
+                            {task.title}
+                          </p>
 
-                      <p className="mt-1 text-xs text-slate-600">
-                        Today · 1 hour
-                      </p>
-                    </div>
+                          <p className="mt-1 text-xs text-slate-600">
+                            {task.completed
+                              ? "Completed"
+                              : "Pending"}
+                          </p>
 
-                    <span className="rounded-full bg-purple-500/10 px-2 py-1 text-[10px] text-purple-400">
-                      High
-                    </span>
-                  </div>
+                        </div>
 
-                  <div className="flex items-center gap-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                    <div className="h-6 w-6 rounded-full border border-blue-400/30" />
+                        <div className="flex items-center gap-3">
 
-                    <div className="flex-1">
-                      <p className="text-sm text-slate-300">
-                        Read for 30 minutes
-                      </p>
+                          <span
+                            className={`rounded-full px-2 py-1 text-[10px] ${
+                              task.completed
+                                ? "bg-emerald-500/10 text-emerald-400"
+                                : "bg-purple-500/10 text-purple-400"
+                            }`}
+                          >
+                            {task.completed ? "Done" : "Pending"}
+                          </span>
 
-                      <p className="mt-1 text-xs text-slate-600">
-                        Today · Personal growth
-                      </p>
-                    </div>
+                          <button
+                            onClick={() =>
+                              handleDeleteTask(task.id)
+                            }
+                            title="Delete task"
+                            className="rounded-lg px-2 py-1 text-sm text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+                          >
+                            🗑️
+                          </button>
 
-                    <span className="rounded-full bg-blue-500/10 px-2 py-1 text-[10px] text-blue-400">
-                      Medium
-                    </span>
-                  </div>
+                        </div>
+
+                      </div>
+                    ))
+
+                  )}
 
                 </div>
               </div>
 
-              {/* Streak */}
+              {/* Current Streak */}
               <div className="rounded-2xl border border-purple-400/10 bg-gradient-to-br from-purple-500/[0.08] to-transparent p-6">
 
                 <p className="text-sm text-slate-400">
@@ -336,6 +666,7 @@ export default function DashboardPage() {
                 </p>
 
                 <div className="mt-6 flex items-center gap-4">
+
                   <span className="text-5xl">
                     🔥
                   </span>
@@ -349,9 +680,11 @@ export default function DashboardPage() {
                       days
                     </p>
                   </div>
+
                 </div>
 
                 <div className="mt-8">
+
                   <div className="mb-2 flex justify-between text-xs">
                     <span className="text-slate-500">
                       Weekly goal
@@ -365,6 +698,7 @@ export default function DashboardPage() {
                   <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
                     <div className="h-full w-[71%] rounded-full bg-gradient-to-r from-purple-600 to-violet-400" />
                   </div>
+
                 </div>
 
                 <p className="mt-6 text-xs leading-5 text-slate-500">
@@ -376,57 +710,101 @@ export default function DashboardPage() {
 
             </div>
 
-            {/* Bottom */}
+            {/* ================= HABITS + GOALS ================= */}
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
 
-              {/* Habits */}
+              {/* REAL HABITS */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
 
                 <div className="flex items-center justify-between">
-                  <h2 className="font-semibold">
-                    Today's Habits
-                  </h2>
 
-                  <span className="text-xs text-slate-500">
-                    4 / 6 completed
-                  </span>
+                  <div>
+                    <h2 className="font-semibold">
+                      Today's Habits
+                    </h2>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      Build your daily routine
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleAddHabit}
+                    disabled={addingHabit}
+                    className="text-sm text-purple-400 hover:text-purple-300 disabled:opacity-50"
+                  >
+                    {addingHabit ? "Adding..." : "+ Add"}
+                  </button>
+
                 </div>
 
                 <div className="mt-5 space-y-3">
 
-                  {[
-                    "Morning workout",
-                    "Read 30 minutes",
-                    "Drink 2L water",
-                    "Practice coding",
-                  ].map((habit, index) => (
-                    <div
-                      key={habit}
-                      className="flex items-center gap-3"
-                    >
-                      <div
-                        className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${
-                          index < 2
-                            ? "bg-emerald-500/10 text-emerald-400"
-                            : "border border-white/10 text-slate-600"
-                        }`}
-                      >
-                        {index < 2 ? "✓" : ""}
-                      </div>
+                  {habitsLoading ? (
 
-                      <span className="text-sm text-slate-300">
-                        {habit}
-                      </span>
+                    <p className="text-sm text-slate-500">
+                      Loading habits...
+                    </p>
+
+                  ) : habits.length === 0 ? (
+
+                    <div className="rounded-xl border border-dashed border-white/10 p-6 text-center">
+
+                      <p className="text-sm text-slate-500">
+                        No habits yet.
+                      </p>
+
+                      <button
+                        onClick={handleAddHabit}
+                        className="mt-3 text-sm text-purple-400 hover:text-purple-300"
+                      >
+                        Add your first habit
+                      </button>
+
                     </div>
-                  ))}
+
+                  ) : (
+
+                    habits.map((habit) => (
+                      <div
+                        key={habit.id}
+                        className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3"
+                      >
+
+                        <div
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs ${
+                            habit.completed
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "border border-white/10 text-slate-600"
+                          }`}
+                        >
+                          {habit.completed ? "✓" : ""}
+                        </div>
+
+                        <span
+                          className={`text-sm ${
+                            habit.completed
+                              ? "text-slate-500 line-through"
+                              : "text-slate-300"
+                          }`}
+                        >
+                          {habit.name}
+                        </span>
+
+                      </div>
+                    ))
+
+                  )}
 
                 </div>
+
               </div>
 
-              {/* Goals */}
+              {/* Active Goals */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
 
                 <div className="flex items-center justify-between">
+
                   <h2 className="font-semibold">
                     Active Goals
                   </h2>
@@ -434,6 +812,7 @@ export default function DashboardPage() {
                   <button className="text-sm text-purple-400">
                     View all
                   </button>
+
                 </div>
 
                 <div className="mt-5 space-y-5">
@@ -443,9 +822,11 @@ export default function DashboardPage() {
                     ["Build LifeOS", 58],
                     ["DSA Preparation", 45],
                   ].map(([goal, progress]) => (
+
                     <div key={goal as string}>
 
                       <div className="mb-2 flex justify-between">
+
                         <span className="text-sm text-slate-300">
                           {goal}
                         </span>
@@ -453,16 +834,20 @@ export default function DashboardPage() {
                         <span className="text-xs text-slate-500">
                           {progress}%
                         </span>
+
                       </div>
 
                       <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+
                         <div
                           style={{ width: `${progress}%` }}
                           className="h-full rounded-full bg-gradient-to-r from-purple-600 to-violet-400"
                         />
+
                       </div>
 
                     </div>
+
                   ))}
 
                 </div>
